@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CineHeat — Rate Movies</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --primary:#d32f2f;
+      --primary-dark:#b71c1c;
+      --bg:#0b0b10;
+      --card:#15151d;
+      --muted:#8a8fa3;
+      --text:#f4f6fb;
+      --accent:#ffeb3b;
+      --ring: rgba(211,47,47,.45);
+      --shadow: 0 8px 30px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 600px at 10% -20%, rgba(211,47,47,.18), transparent 60%),
+        radial-gradient(900px 500px at 110% 0%, rgba(255,235,59,.12), transparent 60%),
+        var(--bg);
+    }
+
+    /* Header / Nav */
+    header{
+      position:sticky; top:0; z-index:10;
+      backdrop-filter: saturate(160%) blur(8px);
+      background: rgba(11,11,16,.6);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .nav{
+      max-width:1100px; margin:0 auto; padding:14px 20px;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:.2px;
+    }
+    .logo{
+      width:34px; height:34px; display:grid; place-items:center;
+      border-radius:9px; background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+      box-shadow:0 6px 18px rgba(211,47,47,.4), inset 0 0 22px rgba(255,255,255,.15);
+    }
+    .brand span{font-size:1.05rem}
+    .cta{
+      display:flex; gap:10px; align-items:center;
+    }
+    button.primary{
+      background:var(--primary); border:none; color:white;
+      padding:10px 16px; border-radius:12px; font-weight:600; cursor:pointer;
+      box-shadow: 0 8px 20px rgba(211,47,47,.35);
+      transition: transform .08s ease, box-shadow .2s ease, background .2s ease;
+    }
+    button.primary:hover{background:var(--primary-dark)}
+    button.primary:active{transform: translateY(1px)}
+    .link{color:var(--muted); text-decoration:none; font-weight:600}
+    .link:hover{color:#c6cbde}
+
+    /* Hero */
+    .hero{
+      max-width:1100px; margin:40px auto 10px; padding:0 20px 10px;
+      display:grid; grid-template-columns:1.2fr .8fr; gap:20px; align-items:center;
+    }
+    @media (max-width:900px){ .hero{grid-template-columns:1fr} }
+    .hero h1{
+      margin:.2em 0 .4em; font-size:clamp(2rem, 4.2vw, 3rem); line-height:1.05;
+    }
+    .sub{color:#c7cada; max-width:60ch}
+    .badge{
+      display:inline-flex; gap:8px; align-items:center; font-weight:700;
+      color:#111; background:linear-gradient(135deg,#fff,#d7d7d7);
+      padding:8px 12px; border-radius:999px; box-shadow: var(--shadow);
+    }
+    .panel{
+      background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+      border-radius:16px; padding:14px; display:flex; gap:14px; align-items:center;
+    }
+
+    /* Grid of movie cards */
+    .wrap{max-width:1100px; margin:10px auto 80px; padding:0 20px}
+    .grid{
+      display:grid; gap:18px;
+      grid-template-columns: repeat( auto-fill, minmax(240px, 1fr) );
+    }
+    .card{
+      background:var(--card); border:1px solid rgba(255,255,255,.06);
+      border-radius:16px; overflow:hidden; box-shadow: var(--shadow);
+      display:flex; flex-direction:column; min-height:340px;
+      transition: transform .18s ease, box-shadow .2s ease, border .2s ease;
+    }
+    .card:hover{ transform: translateY(-2px); box-shadow: 0 14px 36px rgba(0,0,0,.45); border-color: rgba(255,255,255,.12)}
+    .poster{
+      width:100%; aspect-ratio:2/3; object-fit:cover; background:#0e0f14;
+    }
+    .poster.fallback{
+      display:grid; place-items:center; font-size:42px; color:#cdd2e2;
+      background: linear-gradient(135deg,#1e2233,#121521);
+    }
+    .content{ padding:14px 14px 16px; display:flex; flex-direction:column; gap:8px }
+    .title{ font-weight:700; letter-spacing:.2px }
+    .meta{ color:var(--muted); font-size:.92rem }
+    .rating{
+      margin-top:6px; display:flex; align-items:center; gap:10px; justify-content:space-between;
+    }
+    .badge-chip{
+      padding:6px 10px; border-radius:10px; font-weight:700; font-size:.78rem; letter-spacing:.3px
+    }
+    .smokin{ background:rgba(255,87,34,.18); color:#ff7043; border:1px solid rgba(255,87,34,.35) }
+    .pretty{ background:rgba(255,152,0,.18); color:#ffb300; border:1px solid rgba(255,152,0,.35) }
+    .mild{ background:rgba(76,175,80,.18); color:#81c784; border:1px solid rgba(76,175,80,.35) }
+    .cold{ background:rgba(144,164,174,.2); color:#b0bec5; border:1px solid rgba(144,164,174,.35) }
+
+    .icons{ font-size:20px }
+    .avg{ font-weight:800 }
+
+    /* Modal */
+    .modal{
+      position:fixed; inset:0; display:none; place-items:center; z-index:50;
+      background: rgba(0,0,0,.55);
+    }
+    .modal[aria-hidden="false"]{ display:grid }
+    .sheet{
+      width:min(520px, 92vw);
+      background: linear-gradient(180deg, #171822, #12131a);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:16px; padding:18px;
+      box-shadow: 0 26px 80px rgba(0,0,0,.55);
+      animation: pop .16s ease-out;
+    }
+    @keyframes pop{from{transform:scale(.98); opacity:0} to{transform:scale(1); opacity:1}}
+    .sheet h2{margin:6px 0 14px}
+    .row{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
+    .field{ display:flex; flex-direction:column; gap:6px }
+    label{ font-size:.92rem; color:#cfd3e6 }
+    input[type="text"], input[type="number"]{
+      background:#0f1118; border:1px solid #202234; color:var(--text);
+      border-radius:10px; padding:10px; outline:none; transition: border .15s ease, box-shadow .15s ease;
+    }
+    input:focus{ border-color: var(--primary); box-shadow: 0 0 0 5px var(--ring) }
+    .actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:14px }
+    .ghost{ background:transparent; border:1px solid rgba(255,255,255,.18); color:#cfd3e6; border-radius:10px; padding:10px 14px; cursor:pointer }
+    .ghost:hover{ border-color:#fff }
+    .save{ background:var(--primary); border:none; color:white; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:700 }
+    .save[disabled]{ opacity:.7; cursor:not-allowed }
+
+    /* Footer */
+    footer{
+      color:#aeb4c8; text-align:center; padding:28px 14px; border-top:1px solid rgba(255,255,255,.06);
+      background: rgba(0,0,0,.25)
+    }
+  </style>
+</head>
+<body>
+  <!-- Header / Nav -->
+  <header>
+    <nav class="nav">
+      <div class="brand">
+        <div class="logo">🌶️</div>
+        <span>CineHeat</span>
+      </div>
+      <div class="cta">
+        <a class="link" href="#" onclick="scrollToGrid();return false;">Browse</a>
+        <button class="primary" onclick="openModal()">Add a Movie</button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div>
+      <span class="badge">🔥 Rate together. See the heat.</span>
+      <h1>Turn movie nights into a spicy scoreboard</h1>
+      <p class="sub">Add a film, enter three ratings (0–100), and we’ll average them, categorize the result, and pull in a poster automatically. Smokin’, Pretty Hot, Mild, or Ice Cold — with just the right number of 🌶️.</p>
+      <div class="panel" style="margin-top:16px">
+        <div>✅ Smokin’ (avg ≥ 90) &nbsp; | &nbsp; 🟧 Pretty Hot (75–89.99) &nbsp; | &nbsp; 🟩 Mild (50–74.99) &nbsp; | &nbsp; 🧊 Ice Cold (&lt; 50)</div>
+      </div>
+      <div style="margin-top:16px">
+        <button class="primary" onclick="openModal()">Add a Movie</button>
+      </div>
+    </div>
+    <div aria-hidden="true">
+      <img alt="" src="https://images.unsplash.com/photo-1517602302552-471fe67acf66?q=80&w=1200&auto=format&fit=crop" style="width:100%; border-radius:16px; border:1px solid rgba(255,255,255,.08); box-shadow: var(--shadow); object-fit:cover; aspect-ratio:16/10;">
+    </div>
+  </section>
+
+  <!-- Results Grid -->
+  <main class="wrap">
+    <h2 style="margin:14px 0 10px">Your Movies</h2>
+    <div id="grid" class="grid"></div>
+  </main>
+
+  <!-- Modal -->
+  <div id="modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="sheet">
+      <h2 id="modalTitle">Add Movie</h2>
+      <form id="movieForm">
+        <div class="field">
+          <label for="movieTitle">Movie Title</label>
+          <input type="text" id="movieTitle" name="movieTitle" placeholder="e.g., Spider-Man: Into the Spider-Verse" required />
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <div class="field">
+            <label for="rating1">User 1 Rating (0–100)</label>
+            <input type="number" id="rating1" name="rating1" min="0" max="100" required />
+          </div>
+          <div class="field">
+            <label for="rating2">User 2 Rating (0–100)</label>
+            <input type="number" id="rating2" name="rating2" min="0" max="100" required />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="rating3">User 3 Rating (0–100)</label>
+            <input type="number" id="rating3" name="rating3" min="0" max="100" required />
+          </div>
+          <div class="field">
+            <label for="yearGuess">Year (optional, helps poster search)</label>
+            <input type="number" id="yearGuess" name="yearGuess" min="1900" max="2100" placeholder="e.g., 2018" />
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="ghost" onclick="closeModal()">Cancel</button>
+          <button id="saveBtn" type="submit" class="save">Save Movie</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script>
+    const modal = document.getElementById('modal');
+    const form  = document.getElementById('movieForm');
+    const saveBtn = document.getElementById('saveBtn');
+    const grid  = document.getElementById('grid');
+
+    function openModal(){
+      modal.setAttribute('aria-hidden','false');
+      document.getElementById('movieTitle').focus();
+    }
+    function closeModal(){
+      modal.setAttribute('aria-hidden','true');
+      form.reset();
+    }
+    window.addEventListener('click', (e)=>{
+      if(e.target === modal) closeModal();
+    });
+    window.addEventListener('keydown', (e)=>{
+      if(e.key === 'Escape' && modal.getAttribute('aria-hidden') === 'false') closeModal();
+    });
+    function scrollToGrid(){
+      document.getElementById('grid').scrollIntoView({behavior:'smooth', block:'start'});
+    }
+
+    // ---- Rating helpers ----
+    function clamp(num, min, max){ return Math.min(Math.max(num, min), max); }
+
+    function categorize(avg){
+      if (avg >= 90) return {label: "Smokin'", class: 'smokin', icons: '🌶️🌶️🌶️'};
+      if (avg >= 75) return {label: 'Pretty Hot', class: 'pretty', icons: '🌶️🌶️'};
+      if (avg >= 50) return {label: 'Mild', class: 'mild', icons: '🌶️'};
+      return {label: 'Ice Cold', class: 'cold', icons: '🧊'};
+    }
+
+    // ---- Poster fetching (no API key required) ----
+    // Uses iTunes Search API: https://itunes.apple.com/search?term=...&media=movie
+    async function fetchPoster(title, yearGuess){
+      try{
+        const params = new URLSearchParams({
+          term: title,
+          media: 'movie',
+          limit: 5,
+          entity: 'movie'
+        });
+        const res = await fetch(`https://itunes.apple.com/search?${params.toString()}`);
+        if(!res.ok) throw new Error('Network error');
+        const data = await res.json();
+        if(!data?.results?.length) return null;
+
+        // If a year was provided, try to select the best match by year in the trackName or releaseDate
+        let chosen = data.results[0];
+        if (yearGuess){
+          const yearStr = String(yearGuess);
+          const byYearScore = (item)=>{
+            const titleHasYear = (item.trackName||'').includes(yearStr) ? 2 : 0;
+            const release = item.releaseDate ? new Date(item.releaseDate).getFullYear() : null;
+            const yearMatch = release && (release === Number(yearGuess)) ? 3 : 0;
+            const titleMatch = String(item.trackName||'').toLowerCase().includes(String(title).toLowerCase()) ? 1 : 0;
+            return titleHasYear + yearMatch + titleMatch;
+          };
+          chosen = data.results.slice(0,5).sort((a,b)=> byYearScore(b)-byYearScore(a))[0] || chosen;
+        }
+
+        // Upgrade 100x100 to higher res if possible
+        let url = chosen.artworkUrl100 || chosen.artworkUrl60;
+        if(!url) return null;
+        url = url.replace(/100x100bb\.jpg$/, '600x600bb.jpg');
+        return url;
+      }catch(e){
+        console.warn('Poster fetch failed:', e);
+        return null;
+      }
+    }
+
+    function posterFallbackEl(){
+      const div = document.createElement('div');
+      div.className = 'poster fallback';
+      div.textContent = '🎬';
+      return div;
+    }
+
+    function createCard({title, avg, cat, poster}){
+      const card = document.createElement('article');
+      card.className = 'card';
+
+      if (poster){
+        const img = document.createElement('img');
+        img.className = 'poster';
+        img.alt = `${title} poster`;
+        img.src = poster;
+        img.onerror = ()=> { card.replaceChild(posterFallbackEl(), img); };
+        card.appendChild(img);
+      } else {
+        card.appendChild(posterFallbackEl());
+      }
+
+      const content = document.createElement('div');
+      content.className = 'content';
+
+      const h3 = document.createElement('div');
+      h3.className = 'title';
+      h3.textContent = title;
+
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.textContent = 'Community average below';
+
+      const row = document.createElement('div');
+      row.className = 'rating';
+
+      const left = document.createElement('div');
+      left.innerHTML = `<span class="avg">${avg.toFixed(2)}%</span>`;
+
+      const right = document.createElement('div');
+      right.style.display = 'flex'; right.style.alignItems = 'center'; right.style.gap = '10px';
+
+      const chip = document.createElement('span');
+      chip.className = `badge-chip ${cat.class}`;
+      chip.textContent = cat.label;
+
+      const icons = document.createElement('span');
+      icons.className = 'icons';
+      icons.textContent = cat.icons;
+
+      right.appendChild(chip);
+      right.appendChild(icons);
+
+      row.appendChild(left);
+      row.appendChild(right);
+
+      content.appendChild(h3);
+      content.appendChild(meta);
+      content.appendChild(row);
+
+      card.appendChild(content);
+      return card;
+    }
+
+    // ---- Form handling ----
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+
+      const title = String(document.getElementById('movieTitle').value || '').trim();
+      const r1 = clamp(Number(document.getElementById('rating1').value), 0, 100);
+      const r2 = clamp(Number(document.getElementById('rating2').value), 0, 100);
+      const r3 = clamp(Number(document.getElementById('rating3').value), 0, 100);
+      const yearGuess = Number(document.getElementById('yearGuess').value) || undefined;
+
+      if(!title){
+        alert('Please enter a movie title.');
+        return;
+      }
+      const nums = [r1,r2,r3];
+      if(nums.some(n => Number.isNaN(n))){
+        alert('All three ratings must be numbers between 0 and 100.');
+        return;
+      }
+
+      saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+
+      const avg = (r1 + r2 + r3) / 3;
+      const cat = categorize(avg);
+
+      // Fetch poster (non-blocking fallback handled)
+      const poster = await fetchPoster(title, yearGuess);
+
+      const card = createCard({title, avg, cat, poster});
+      grid.prepend(card); // newest first
+
+      saveBtn.disabled = false; saveBtn.textContent = 'Save Movie';
+      closeModal();
+      scrollToGrid();
+    });
+
+    // Optionally: starter examples
+    const samples = [
+      {title:'The Dark Knight', avg: 94},
+      {title:'Mean Girls', avg: 76},
+      {title:'The Mummy (1999)', avg: 73},
+      {title:'Morbius', avg: 34},
+    ];
+    (async function seed(){
+      for (const s of samples){
+        const cat = categorize(s.avg);
+        const poster = await fetchPoster(s.title);
+        const card = createCard({title:s.title, avg:s.avg, cat, poster});
+        grid.appendChild(card);
+      }
+    })();
+  </script>
+
+  <footer>
+    Built with ❤️ for movie nights — CineHeat
+  </footer>
+</body>
+</html>
